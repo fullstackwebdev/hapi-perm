@@ -1,73 +1,83 @@
 'use strict';
 
-const rethink = require('rethinkdb');
+const { r } = require('rethinkdb-ts');
 const pkg = require('./package.json');
+const Timeout = require('await-timeout');
 
-const createConnection = (config) => {
-    return rethink.connect(config).catch((err) => {
-        if (err.message.includes('ECONNREFUSED')) {
-            const end = err.message.indexOf('.\n');
-            const start = err.message.lastIndexOf(' ', end) + 1;
-            const host = err.message.substring(start, end);
-            throw new Error('Unable to reach RethinkDB at ' + host);
-        }
-        throw err;
-    });
-};
+const register = async (server, options) => {
+    const queryTimeoutMs = options.queryTimeout * 1000 || 2000;
 
-const register = async (server, option) => {
-    const pool = new Set();
-    const getConnection = async () => {
-        // TODO: Implement max connections ceiling and if it is reached, wait for a busy
-        // connection to become available, instead of creating a new connection.
-        if (pool.size === 0) {
-            const connection = await createConnection(option);
-            const deleteConnection = () => {
-                pool.delete(connection);
-            };
-            connection.once('close', deleteConnection);
-            connection.once('timeout', deleteConnection);
-            connection.once('error', deleteConnection);
-            return connection;
-        }
-        for (const connection of pool) {
-            pool.delete(connection);
-            if (connection.isOpen()) {
-                return connection;
-            }
-        }
-    };
-
-    pool.add(await getConnection());
+    await r.connectPool(options);
 
     server.decorate('server', 'db', async (query) => {
-        const connection = await getConnection();
-        const result = await query.run(connection);
-        // TODO: If result is a cursor, we should probably wait for it to close before
-        // adding the connection back to the pool.
-        pool.add(connection);
+
+        let result;
+        try {
+            // .wait is broken in rethinkdb 
+            // Run query, timeout 
+            const timer = new Timeout();
+            try {
+                result = await Promise.race([
+                    r.expr(query).run(),
+                    timer.set(queryTimeoutMs)
+                        .then(() => Promise.reject('Timeout'))
+                ]);
+            } finally {
+                timer.clear();
+            }
+        } catch (error) {
+            if(error === 'Timeout') {
+                console.log('Query Timeout! Database connection is', conn.open);
+                console.error(error);
+                throw new Error('Timeout exceeded for query');  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator
+            } else {
+                console.log('Critical uncaught error');
+                console.error(error);
+                throw error;  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator!
+            }
+        }
         return result;
     });
-    // TODO: Find some way to get rid of this in favor of just server.db()
+
     server.decorate('server', 'dbCursor', async (query) => {
-        const connection = await getConnection();
-        const cursor = await query.run(connection);
+        let cursor;
+        try {
+            // .wait is broken in rethinkdb 
+            // Run query, timeout 
+            const timer = new Timeout();
+            try {
+                cursor = await Promise.race([
+                    // From rethinkdb-ts README.md
+                    /* 
+                    ... No { cursor: true } option, for getting a cursor use .getCursor(runOptions) instead of .run(runOptions)
+.run() will coerce streams to array by default feeds will return a cursor like rethinkdbdash
+
+                    */
+                    r.expr(query).getCursor(),  // Note: not .run()
+                    timer.set(queryTimeoutMs)
+                        .then(() => Promise.reject('Timeout'))
+                ]);
+            } finally {
+                timer.clear();
+            }
+        } catch (error) {
+            if(error === 'Timeout') {
+                console.log('Query Timeout! Database connection is', conn.open);
+                console.error(error);
+                throw new Error('Timeout exceeded for query');  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator
+            } else {
+                console.log('Critical uncaught error');
+                console.error(error);
+                throw error;  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator!
+            }
+        }
         return {
             cursor,
-            done() {
-                pool.add(connection);
-            }
+            done = () => {}
         };
     });
     server.events.on('stop', () => {
-        for (const connection of pool) {
-            pool.delete(connection);
-            connection.close((err) => {
-                if (err) {
-                    throw err;
-                }
-            });
-        }
+        conn.close();
     });
 };
 

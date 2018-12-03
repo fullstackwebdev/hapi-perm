@@ -33,9 +33,11 @@
     },
     "devDependencies": {
         "ava": "^0.24.0",
+        "await-timeout": "^0.3.0",
         "eslint-config-tidy": "^0.5.0",
         "hapi": "^17.2.0",
         "rethinkdb": "^2.3.3",
+        "rethinkdb-ts": "^2.4.0-rc.11",
         "xo": "^0.18.0"
     },
     "keywords": [
@@ -63,5 +65,6 @@
     ],
     "xo": {
         "extend": "tidy"
-    }
+    },
+    "dependencies": {}
 }
