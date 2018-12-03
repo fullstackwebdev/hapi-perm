@@ -72,8 +72,7 @@ const register = async (server, options) => {
             }
         }
         return {
-            cursor,
-            done = () => {}
+            cursor
         };
     });
     server.events.on('stop', () => {
