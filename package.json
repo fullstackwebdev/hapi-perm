@@ -29,7 +29,8 @@
     ],
     "peerDependencies": {
         "hapi": ">=17",
-        "rethinkdb-ts": ">=2"
+        "rethinkdb-ts": ">=2",
+	"await-timeout": "^0.3.0"
     },
     "devDependencies": {
         "ava": "^0.24.0",
