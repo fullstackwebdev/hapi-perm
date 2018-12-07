@@ -28,8 +28,7 @@
         "index.js"
     ],
     "peerDependencies": {
-        "hapi": ">=17",
-        "rethinkdb-ts": ">=2"
+        "hapi": ">=17"
     },
     "devDependencies": {
         "ava": "^0.24.0",

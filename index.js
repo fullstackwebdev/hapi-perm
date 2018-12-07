@@ -6,19 +6,33 @@ const Timeout = require('await-timeout');
 
 const register = async (server, options) => {
     const queryTimeoutMs = options.queryTimeout * 1000 || 2000;
+    options.pingInterval = options.pingInterval || 2;
 
-    await r.connectPool(options);
+    let conn = await r.connectPool(options);
+    
+    server.events.on('start', async () => {
+        try {
+            await r.connectPool(options);
+        } catch (error) {
+            console.error(error);
+            console.log('real error');
+        }
+        console.log('Started', r.open);
+    });
+
+    server.decorate('server', 'r', r);
 
     server.decorate('server', 'db', async (query) => {
 
+
         let result;
         try {
-            // .wait is broken in rethinkdb 
+            // A .wait is broken in rethinkdb 
             // Run query, timeout 
             const timer = new Timeout();
             try {
                 result = await Promise.race([
-                    r.expr(query).run(),
+                    query.run(),
                     timer.set(queryTimeoutMs)
                         .then(() => Promise.reject('Timeout'))
                 ]);
@@ -26,14 +40,10 @@ const register = async (server, options) => {
                 timer.clear();
             }
         } catch (error) {
-            if(error === 'Timeout') {
-                console.log('Query Timeout! Database connection is', conn.open);
-                console.error(error);
-                throw new Error('Timeout exceeded for query');  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator
+            if (error === 'Timeout') {
+                throw new Error('Timeout exceeded for query');
             } else {
-                console.log('Critical uncaught error');
-                console.error(error);
-                throw error;  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator!
+                throw error;
             }
         }
         return result;
@@ -42,18 +52,12 @@ const register = async (server, options) => {
     server.decorate('server', 'dbCursor', async (query) => {
         let cursor;
         try {
-            // .wait is broken in rethinkdb 
+            // A .wait is broken in rethinkdb 
             // Run query, timeout 
             const timer = new Timeout();
             try {
                 cursor = await Promise.race([
-                    // From rethinkdb-ts README.md
-                    /* 
-                    ... No { cursor: true } option, for getting a cursor use .getCursor(runOptions) instead of .run(runOptions)
-.run() will coerce streams to array by default feeds will return a cursor like rethinkdbdash
-
-                    */
-                    r.expr(query).getCursor(),  // Note: not .run()
+                    query.getCursor(),
                     timer.set(queryTimeoutMs)
                         .then(() => Promise.reject('Timeout'))
                 ]);
@@ -61,14 +65,12 @@ const register = async (server, options) => {
                 timer.clear();
             }
         } catch (error) {
-            if(error === 'Timeout') {
-                console.log('Query Timeout! Database connection is', conn.open);
-                console.error(error);
-                throw new Error('Timeout exceeded for query');  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator
+            if (error === 'Timeout') {
+                throw new Error('Timeout exceeded for query');
             } else {
                 console.log('Critical uncaught error');
                 console.error(error);
-                throw error;  // CRITICAL TODO: THIS IS NOT CAUGHT ANYWHERE! for decorator!
+                throw error; 
             }
         }
         return {
@@ -76,7 +78,7 @@ const register = async (server, options) => {
         };
     });
     server.events.on('stop', () => {
-        conn.close();
+        conn.drain();
     });
 };
 
@@ -84,3 +86,5 @@ module.exports.plugin = {
     register,
     pkg
 };
+
+module.exports.r = r;
