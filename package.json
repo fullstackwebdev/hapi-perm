@@ -1,6 +1,6 @@
 {
     "name": "hapi-perm",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "RethinkDB storage for hapi web servers",
     "homepage": "https://github.com/sholladay/hapi-perm",
     "main": "index.js",
@@ -32,13 +32,13 @@
         "rethinkdb-ts": ">=2"
     },
     "devDependencies": {
+	    "await-timeout": "^0.3.0",
         "ava": "^0.24.0",
         "await-timeout": "^0.3.0",
         "eslint-config-tidy": "^0.5.0",
         "hapi": "^17.2.0",
         "rethinkdb-ts": "^2.4.0-rc.11",
-        "xo": "^0.18.0",
-	    "await-timeout": "^0.3.0"
+        "xo": "^0.18.0"
     },
     "keywords": [
         "hapi",

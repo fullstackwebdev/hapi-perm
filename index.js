@@ -1,48 +1,51 @@
 'use strict';
+/* eslint-disable id-length, prefer-promise-reject-errors, arrow-body-style */
 
+const Timeout = require('await-timeout');
 const { r } = require('rethinkdb-ts');
 const pkg = require('./package.json');
-const Timeout = require('await-timeout');
 
 const register = async (server, options) => {
     const queryTimeoutMs = options.queryTimeout * 1000 || 2000;
     options.pingInterval = options.pingInterval || 2;
 
     let conn = await r.connectPool(options);
-    
+
     server.events.on('start', async () => {
         try {
             conn = await r.connectPool(options);
-        } catch (error) {
-            console.error(error);
-            console.log('real error');
         }
-        console.log('Started', r.open);
+        catch (err) {
+            console.error(err);
+            throw err;
+        }
     });
 
     server.decorate('server', 'r', r);
 
     server.decorate('server', 'db', async (query) => {
-
         let result;
         try {
-            // A .wait is broken in rethinkdb 
-            // Run query, timeout 
+            // A .wait is broken in rethinkdb
+            // Run query, timeout
             const timer = new Timeout();
             try {
                 result = await Promise.race([
                     query.run(),
                     timer.set(queryTimeoutMs)
-                        .then(() => Promise.reject('Timeout'))
+                        .then(() => Promise.reject('timeout'))
                 ]);
-            } finally {
+            }
+            finally {
                 timer.clear();
             }
-        } catch (error) {
-            if (error === 'Timeout') {
+        }
+        catch (err) {
+            if (err === 'timeout') {
                 throw new Error('Timeout exceeded for query');
-            } else {
-                throw error;
+            }
+            else {
+                throw err;
             }
         }
         return result;
@@ -51,8 +54,6 @@ const register = async (server, options) => {
     server.decorate('server', 'dbCursor', async (query) => {
         let cursor;
         try {
-            // A .wait is broken in rethinkdb 
-            // Run query, timeout 
             const timer = new Timeout();
             try {
                 cursor = await Promise.race([
@@ -60,16 +61,18 @@ const register = async (server, options) => {
                     timer.set(queryTimeoutMs)
                         .then(() => Promise.reject('Timeout'))
                 ]);
-            } finally {
+            }
+            finally {
                 timer.clear();
             }
-        } catch (error) {
-            if (error === 'Timeout') {
+        }
+        catch (err) {
+            if (err === 'Timeout') {
                 throw new Error('Timeout exceeded for query');
-            } else {
-                console.log('Critical uncaught error');
-                console.error(error);
-                throw error; 
+            }
+            else {
+                console.error(err);
+                throw err;
             }
         }
         return {
