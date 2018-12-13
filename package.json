@@ -28,6 +28,7 @@
         "index.js"
     ],
     "peerDependencies": {
+        "await-timeout": "^0.3.0",
         "hapi": ">=17",
         "rethinkdb-ts": ">=2"
     },
