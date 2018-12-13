@@ -34,7 +34,6 @@
     "devDependencies": {
         "await-timeout": "^0.3.0",
         "ava": "^0.24.0",
-        "await-timeout": "^0.3.0",
         "eslint-config-tidy": "^0.5.0",
         "hapi": "^17.2.0",
         "rethinkdb-ts": "^2.4.0-rc.11",
