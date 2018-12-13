@@ -37,7 +37,8 @@
         "eslint-config-tidy": "^0.5.0",
         "hapi": "^17.2.0",
         "rethinkdb-ts": "^2.4.0-rc.11",
-        "xo": "^0.18.0"
+        "xo": "^0.18.0",
+	    "await-timeout": "^0.3.0"
     },
     "keywords": [
         "hapi",
