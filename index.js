@@ -12,7 +12,7 @@ const register = async (server, options) => {
     
     server.events.on('start', async () => {
         try {
-            await r.connectPool(options);
+            conn = await r.connectPool(options);
         } catch (error) {
             console.error(error);
             console.log('real error');
@@ -23,7 +23,6 @@ const register = async (server, options) => {
     server.decorate('server', 'r', r);
 
     server.decorate('server', 'db', async (query) => {
-
 
         let result;
         try {
