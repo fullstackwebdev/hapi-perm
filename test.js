@@ -52,5 +52,5 @@ test('without perm', async (t) => {
 
 test('error if unable to connect', async (t) => {
     const err = await t.throws(mockServer());
-    t.is(err.message, 'Error initializing pool');
+    t.is(err.message, 'Unable to establish connection, see cause for more info.');
 });
